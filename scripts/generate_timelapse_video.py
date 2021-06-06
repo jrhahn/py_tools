@@ -1,17 +1,16 @@
+import argparse
+import logging
+from os import makedirs, system, remove
+from pathlib import Path
 from typing import Tuple
 
-import argparse
-
+import cv2
 import numpy as np
 from PIL import Image, ExifTags
-from pathlib import Path
-from os import makedirs, system, remove
-import logging
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-import cv2
 
 # Load the cascade
 # source: https://github.com/opencv/opencv/tree/master/data/haarcascades
@@ -21,7 +20,7 @@ face_cascade = cv2.CascadeClassifier(str(path_cascade))
 
 def detect_face(
         img: Image
-) -> Tuple[float, float]:
+) -> Tuple[float, float, float, float]:
     open_cv_image = np.array(img.convert('RGB'))
     # Convert RGB to BGR
     open_cv_image = open_cv_image[:, :, ::-1].copy()
@@ -31,11 +30,13 @@ def detect_face(
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
 
     if len(faces) > 0:
-        left = faces[0][0]
-        top = faces[0][1]
-        return left, top
+        left = min([ff[0] for ff in faces])
+        right = max([ff[0] + ff[2] for ff in faces])
+        top = min([ff[1] for ff in faces])
+        bottom = max([ff[1] + ff[3] for ff in faces])
+        return left, top, right, bottom
 
-    return None, None
+    return None
 
 
 def scale_to_target_size(
@@ -55,16 +56,17 @@ def scale_to_target_size(
         # align on height and crop on width
         img = img.resize((int(target_height / aspect), target_height))
 
-    face_left, face_top = detect_face(img=img)
+    face_area = detect_face(img=img)
 
     diff_x = img.size[0] - target_width
     diff_y = img.size[1] - target_height
 
     weight_x = 0.5
     weight_y = 0.5
-    if face_left is not None:
-        weight_x = face_left / img.size[0]
-        weight_y = face_top / img.size[1]
+
+    if face_area is not None:
+        weight_x = face_area[0] / img.size[0]
+        weight_y = face_area[1] / img.size[1]
 
     if diff_x < 0:
         raise ValueError("diffX is negative")
@@ -108,29 +110,29 @@ def preprocess_images(
         target_width: int = 1080,
         target_height: int = 1920
 ) -> Path:
-    path_tmp = path_destination / 'tmp'
+    path_tmp = path_destination / 'tmp2'
 
-    # for ff in path_source.rglob('*'):
-    #     if not ff.is_file():
-    #         continue
-    #
-    #     logger.info(f"Preparing {ff} ..")
-    #
-    #     file_out_ = Path(str(ff).replace(str(path_source), str(path_tmp)))
-    #
-    #     makedirs(file_out_.parents[0], exist_ok=True)
-    #
-    #     img = Image.open(ff)
-    #
-    #     img = fix_rotation(img)
-    #     img = scale_to_target_size(
-    #         img=img,
-    #         target_width=target_width,
-    #         target_height=target_height
-    #     )
-    #     logger.info(f"  -> {img.size}")
-    #
-    #     img.save(file_out_)
+    for ff in path_source.rglob('*'):
+        if not ff.is_file():
+            continue
+
+        logger.info(f"Preparing {ff} ..")
+
+        file_out_ = Path(str(ff).replace(str(path_source), str(path_tmp)))
+
+        makedirs(file_out_.parents[0], exist_ok=True)
+
+        img = Image.open(ff)
+
+        img = fix_rotation(img)
+        img = scale_to_target_size(
+            img=img,
+            target_width=target_width,
+            target_height=target_height
+        )
+        logger.info(f"  -> {img.size}")
+
+        img.save(file_out_)
 
     return path_tmp
 
@@ -169,28 +171,25 @@ def run(
         path_destination=path_destination
     )
 
-    cmd = f'ffmpeg -y -r {1/fps} -f concat -safe 0 -i {path_file_list} -s {target_width}x{target_height}  -c:v libx264 -vf "fps=fps={fps}" {path_destination / "output.mp4"}'
+    cmd = f'ffmpeg -y -r {1 / fps} -f concat -safe 0 -i {path_file_list} -s {target_width}x{target_height}  -c:v libx264 -vf "fps=fps={fps}" {path_destination / "output.mp4"}'
 
     system(cmd)
 
-    # remove(path_file_list)
+    remove(path_file_list)
 
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser(
-    #     description='Sorts all files in a folder recursively according to '
-    #                 'the date of creation by adding an index prefix to the filename'
-    # )
-    # parser.add_argument('--path_source', type=str, required=True, help='root folder of the files')
-    # parser.add_argument('--path_destination', type=str, required=True, help='folder where the files will be written to')
-    #
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser(
+        description='Sorts all files in a folder recursively according to '
+                    'the date of creation by adding an index prefix to the filename'
+    )
+    parser.add_argument('--path_source', type=str, required=True, help='root folder of the files')
+    parser.add_argument('--path_destination', type=str, required=True, help='folder where the files will be written to')
 
-    # path_source = Path(args.path_source)
-    # path_destination = Path(args.path_destination)
+    args = parser.parse_args()
 
-    path_source = Path('.').resolve().parents[1] / 'py_timelapse'
-    path_destination = Path('.').resolve() / 'output'
+    path_source = Path(args.path_source)
+    path_destination = Path(args.path_destination)
 
     run(
         path_source=path_source.resolve(),
