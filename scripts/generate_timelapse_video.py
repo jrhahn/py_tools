@@ -27,7 +27,11 @@ def detect_face(
 
     gray = cv2.cvtColor(open_cv_image, cv2.COLOR_BGR2GRAY)
     # Detect the faces
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+    faces = face_cascade.detectMultiScale(
+        image=gray,
+        minSize=(int(img.size[1] / 5), int(img.size[1] / 5)),
+        maxSize=(img.size[1], img.size[1])
+    )
 
     if len(faces) > 0:
         left = min([ff[0] for ff in faces])
@@ -110,7 +114,7 @@ def preprocess_images(
         target_width: int = 1080,
         target_height: int = 1920
 ) -> Path:
-    path_tmp = path_destination / 'tmp2'
+    path_tmp = path_destination / 'tmp'
 
     for ff in path_source.rglob('*'):
         if not ff.is_file():
@@ -143,10 +147,12 @@ def generate_file_list(
         filename: str = 'filelist.txt'
 ) -> Path:
     path_file = path_destination / filename
-    files = sorted(list(f"file '{ff}' \n" for ff in path_source.rglob('*') if ff.is_file()))
+
+    files = sorted([ff for ff in path_source.rglob('*') if ff.is_file()])
+    lines = [f"file '{ff}' \n" for ff in files]
 
     with open(path_file, 'w') as f:
-        f.writelines(files)
+        f.writelines(lines)
 
     return path_file
 
@@ -156,7 +162,7 @@ def run(
         path_destination: Path,
         target_width: int = 1080,
         target_height: int = 1920,
-        fps: int = 1
+        fps: int = 3
 ):
     makedirs(path_destination, exist_ok=True)
     logger.info(f"Reading from {path_source} ..")
@@ -171,12 +177,18 @@ def run(
         path_destination=path_destination
     )
 
-    cmd = f'ffmpeg -y -r {1 / fps} -f concat -safe 0 -i {path_file_list} -s {target_width}x{target_height}  -c:v libx264 -vf "fps=fps={fps}" {path_destination / "output.mp4"}'
+    cmd = f'ffmpeg -y -r {fps} -f concat -safe 0 -i {path_file_list} -s {target_width}x{target_height} -c:v libx264 -vf fps=fps={fps} {path_destination / "output.mp4"}'
+    system(cmd)
 
+    duration_in_seconds = 141
+
+    cmd = f"ffmpeg -ss 00:00:00  -t {duration_in_seconds} -i {path_destination / 'output.mp4'} -ss 0:00:00 -t {duration_in_seconds} -i {path_destination / 'music.mp3'} -map 0:v:0 -map 1:a:0 -y {path_destination / 'output_with_music.mp4'}"
+    system(cmd)
+
+    cmd = f"ffmpeg -y -i {path_destination / 'output_with_music.mp4'} -vf scale=720:1280 -c:v libx264 -crf 33 -preset veryslow -c:a copy  {path_destination / 'output_with_music_low_res.mp4'}"
     system(cmd)
 
     remove(path_file_list)
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
