@@ -113,16 +113,14 @@ def preprocess_images(
         path_destination: Path,
         target_width: int = 1080,
         target_height: int = 1920
-) -> Path:
-    path_tmp = path_destination / 'tmp'
-
+):
     for ff in path_source.rglob('*'):
         if not ff.is_file():
             continue
 
         logger.info(f"Preparing {ff} ..")
 
-        file_out_ = Path(str(ff).replace(str(path_source), str(path_tmp)))
+        file_out_ = Path(str(ff).replace(str(path_source), str(path_destination)))
 
         makedirs(file_out_.parents[0], exist_ok=True)
 
@@ -138,23 +136,20 @@ def preprocess_images(
 
         img.save(file_out_)
 
-    return path_tmp
-
 
 def generate_file_list(
         path_source: Path,
-        path_destination: Path,
-        filename: str = 'filelist.txt'
-) -> Path:
-    path_file = path_destination / filename
-
+        path_file_list: Path
+) -> int:
     files = sorted([ff for ff in path_source.rglob('*') if ff.is_file()])
     lines = [f"file '{ff}' \n" for ff in files]
 
-    with open(path_file, 'w') as f:
+    num_files = len(files)
+
+    with open(path_file_list, 'w') as f:
         f.writelines(lines)
 
-    return path_file
+    return num_files
 
 
 def run(
@@ -167,20 +162,22 @@ def run(
     makedirs(path_destination, exist_ok=True)
     logger.info(f"Reading from {path_source} ..")
 
-    path_tmp = preprocess_images(
+    path_file_list = path_destination / 'filelist.txt'
+
+    preprocess_images(
         path_source=path_source,
-        path_destination=path_destination
+        path_destination=path_destination / 'tmp'
     )
 
-    path_file_list = generate_file_list(
-        path_source=path_tmp,
-        path_destination=path_destination
+    num_files = generate_file_list(
+        path_source=path_destination / 'tmp',
+        path_file_list=path_file_list
     )
 
     cmd = f'ffmpeg -y -r {fps} -f concat -safe 0 -i {path_file_list} -s {target_width}x{target_height} -c:v libx264 -vf fps=fps={fps} {path_destination / "output.mp4"}'
     system(cmd)
 
-    duration_in_seconds = 141
+    duration_in_seconds = num_files / fps
 
     cmd = f"ffmpeg -ss 00:00:00  -t {duration_in_seconds} -i {path_destination / 'output.mp4'} -ss 0:00:00 -t {duration_in_seconds} -i {path_destination / 'music.mp3'} -map 0:v:0 -map 1:a:0 -y {path_destination / 'output_with_music.mp4'}"
     system(cmd)
@@ -189,6 +186,7 @@ def run(
     system(cmd)
 
     remove(path_file_list)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
