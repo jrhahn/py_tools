@@ -155,6 +155,7 @@ def generate_file_list(
 def run(
         path_source: Path,
         path_destination: Path,
+        path_to_music: Path,
         target_width: int = 1080,
         target_height: int = 1920,
         fps: int = 3
@@ -179,10 +180,10 @@ def run(
 
     duration_in_seconds = num_files / fps
 
-    cmd = f"ffmpeg -ss 00:00:00  -t {duration_in_seconds} -i {path_destination / 'output.mp4'} -ss 0:00:00 -t {duration_in_seconds} -i {path_destination / 'music.mp3'} -map 0:v:0 -map 1:a:0 -y {path_destination / 'output_with_music.mp4'}"
+    cmd = f"ffmpeg -ss 00:00:00  -t {duration_in_seconds} -i {path_destination / 'output.mp4'} -ss 0:00:00 -t {duration_in_seconds} -i {path_to_music} -map 0:v:0 -map 1:a:0 -y {path_destination / 'output_with_music.mp4'}"
     system(cmd)
 
-    cmd = f"ffmpeg -y -i {path_destination / 'output_with_music.mp4'} -vf scale=720:1280 -c:v libx264 -crf 33 -preset veryslow -c:a copy  {path_destination / 'output_with_music_low_res.mp4'}"
+    cmd = f"ffmpeg -y -i {path_destination / 'output_with_music.mp4'} -vf scale=720:1280 -c:v libx264 -crf 42 -preset veryslow -c:a copy  {path_destination / 'output_with_music_low_res.mp4'}"
     system(cmd)
 
     remove(path_file_list)
@@ -195,13 +196,16 @@ if __name__ == '__main__':
     )
     parser.add_argument('--path_source', type=str, required=True, help='root folder of the files')
     parser.add_argument('--path_destination', type=str, required=True, help='folder where the files will be written to')
+    parser.add_argument('--path_to_music', type=str, required=True, help='filename and path to mp3 file')
 
     args = parser.parse_args()
 
     path_source = Path(args.path_source)
     path_destination = Path(args.path_destination)
+    path_to_music = Path(args.path_to_music)
 
     run(
         path_source=path_source.resolve(),
-        path_destination=path_destination.resolve()
+        path_destination=path_destination.resolve(),
+        path_to_music=path_to_music
     )
