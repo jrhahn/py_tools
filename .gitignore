@@ -1,5 +1,5 @@
-.mp3
-.mp4
-.JPG
-.jpg
-.txt
+*.mp3
+*.mp4
+*.JPG
+*.jpg
+*.txt
