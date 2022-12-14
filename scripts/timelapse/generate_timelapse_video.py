@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 import logging
 from os import makedirs, system, remove

@@ -1,3 +1,8 @@
+*.mp3
+*.mp4
+*.JPG
+*.jpg
+*.txt
 # custom
 scripts/output
 
