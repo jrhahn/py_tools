@@ -35,11 +35,17 @@ def run(
 
     path_output.mkdir(parents=True, exist_ok=True)
 
-    for file in path_input.glob("*.jpg"):
-        process(file_in=file, file_out=path_output / file.name)
+    file_ext = [
+        "*.jpg",
+        "*.jpeg",
+        "*.png",
+    ]
 
-    for file in path_input.glob("*.png"):
-        process(file_in=file, file_out=path_output / file.name)
+    file_ext = file_ext + [f.upper() for f in file_ext]
+
+    for ext in file_ext:
+        for file in path_input.glob(ext):
+            process(file_in=file, file_out=path_output / file.name)
 
 
 if __name__ == "__main__":
