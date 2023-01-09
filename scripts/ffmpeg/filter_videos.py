@@ -11,8 +11,8 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 if __name__ == "__main__":
-    path_data = Path('.')
-    path_target = Path('..') / 'filtered'
+    path_data = Path(".")
+    path_target = Path("..") / "filtered"
     path_target.mkdir(exist_ok=True)
 
     threshold = 50

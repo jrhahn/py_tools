@@ -16,14 +16,14 @@ logger.setLevel(logging.DEBUG)
 
 # Load the cascade
 # source: https://github.com/opencv/opencv/tree/master/data/haarcascades
-path_cascade = Path('.').resolve().parents[0] / 'resources' / 'haarcascade_frontalface_default.xml'
+path_cascade = (
+    Path(".").resolve().parents[0] / "resources" / "haarcascade_frontalface_default.xml"
+)
 face_cascade = cv2.CascadeClassifier(str(path_cascade))
 
 
-def detect_face(
-        img: Image
-) -> Tuple[float, float, float, float]:
-    open_cv_image = np.array(img.convert('RGB'))
+def detect_face(img: Image) -> Tuple[float, float, float, float]:
+    open_cv_image = np.array(img.convert("RGB"))
     # Convert RGB to BGR
     open_cv_image = open_cv_image[:, :, ::-1].copy()
 
@@ -32,7 +32,7 @@ def detect_face(
     faces = face_cascade.detectMultiScale(
         image=gray,
         minSize=(int(img.size[1] / 5), int(img.size[1] / 5)),
-        maxSize=(img.size[1], img.size[1])
+        maxSize=(img.size[1], img.size[1]),
     )
 
     if len(faces) > 0:
@@ -46,9 +46,7 @@ def detect_face(
 
 
 def scale_to_target_size(
-        img: Image,
-        target_width: float,
-        target_height: float
+    img: Image, target_width: float, target_height: float
 ) -> Image:
     img_size = img.size
     aspect = img_size[1] / img_size[0]
@@ -85,7 +83,7 @@ def scale_to_target_size(
             int(diff_x * weight_x),
             int(diff_y * weight_y),
             int(diff_x * weight_x) + target_width,
-            int(diff_y * weight_y) + target_height
+            int(diff_y * weight_y) + target_height,
         )
     )
 
@@ -96,7 +94,7 @@ def fix_rotation(img: Image) -> Image:
     exif = img._getexif()
 
     for orientation in ExifTags.TAGS.keys():
-        if ExifTags.TAGS[orientation] == 'Orientation':
+        if ExifTags.TAGS[orientation] == "Orientation":
             break
 
     if exif[orientation] == 3:
@@ -111,12 +109,12 @@ def fix_rotation(img: Image) -> Image:
 
 # todo make image size constant
 def preprocess_images(
-        path_source: Path,
-        path_destination: Path,
-        target_width: int = 1080,
-        target_height: int = 1920
+    path_source: Path,
+    path_destination: Path,
+    target_width: int = 1080,
+    target_height: int = 1920,
 ):
-    for ff in path_source.rglob('*'):
+    for ff in path_source.rglob("*"):
         if not ff.is_file():
             continue
 
@@ -130,51 +128,44 @@ def preprocess_images(
 
         img = fix_rotation(img)
         img = scale_to_target_size(
-            img=img,
-            target_width=target_width,
-            target_height=target_height
+            img=img, target_width=target_width, target_height=target_height
         )
         logger.info(f"  -> {img.size}")
 
         img.save(file_out_)
 
 
-def generate_file_list(
-        path_source: Path,
-        path_file_list: Path
-) -> int:
-    files = sorted([ff for ff in path_source.rglob('*') if ff.is_file()])
+def generate_file_list(path_source: Path, path_file_list: Path) -> int:
+    files = sorted([ff for ff in path_source.rglob("*") if ff.is_file()])
     lines = [f"file '{ff}' \n" for ff in files]
 
     num_files = len(files)
 
-    with open(path_file_list, 'w') as f:
+    with open(path_file_list, "w") as f:
         f.writelines(lines)
 
     return num_files
 
 
 def run(
-        path_source: Path,
-        path_destination: Path,
-        path_to_music: Path,
-        target_width: int = 1080,
-        target_height: int = 1920,
-        fps: int = 3
+    path_source: Path,
+    path_destination: Path,
+    path_to_music: Path,
+    target_width: int = 1080,
+    target_height: int = 1920,
+    fps: int = 3,
 ):
     makedirs(path_destination, exist_ok=True)
     logger.info(f"Reading from {path_source} ..")
 
-    path_file_list = path_destination / 'filelist.txt'
+    path_file_list = path_destination / "filelist.txt"
 
     preprocess_images(
-        path_source=path_source,
-        path_destination=path_destination / 'tmp'
+        path_source=path_source, path_destination=path_destination / "tmp"
     )
 
     num_files = generate_file_list(
-        path_source=path_destination / 'tmp',
-        path_file_list=path_file_list
+        path_source=path_destination / "tmp", path_file_list=path_file_list
     )
 
     cmd = f'ffmpeg -y -r {fps} -f concat -safe 0 -i {path_file_list} -s {target_width}x{target_height} -c:v libx264 -vf fps=fps={fps} {path_destination / "output.mp4"}'
@@ -191,14 +182,23 @@ def run(
     remove(path_file_list)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description='Sorts all files in a folder recursively according to '
-                    'the date of creation by adding an index prefix to the filename'
+        description="Sorts all files in a folder recursively according to "
+        "the date of creation by adding an index prefix to the filename"
     )
-    parser.add_argument('--path_source', type=str, required=True, help='root folder of the files')
-    parser.add_argument('--path_destination', type=str, required=True, help='folder where the files will be written to')
-    parser.add_argument('--path_to_music', type=str, required=True, help='filename and path to mp3 file')
+    parser.add_argument(
+        "--path_source", type=str, required=True, help="root folder of the files"
+    )
+    parser.add_argument(
+        "--path_destination",
+        type=str,
+        required=True,
+        help="folder where the files will be written to",
+    )
+    parser.add_argument(
+        "--path_to_music", type=str, required=True, help="filename and path to mp3 file"
+    )
 
     args = parser.parse_args()
 
@@ -209,5 +209,5 @@ if __name__ == '__main__':
     run(
         path_source=path_source.resolve(),
         path_destination=path_destination.resolve(),
-        path_to_music=path_to_music
+        path_to_music=path_to_music,
     )

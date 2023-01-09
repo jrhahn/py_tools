@@ -20,13 +20,16 @@ def sort_files(files: List[Path]) -> Dict[Path, Path]:
     indices = np.argsort([f.stat().st_ctime for f in files])
     files_sorted = [files[ii] for ii in indices]
 
-    return {f: f.parents[0] / f"{(ii) + 1:02d}_{f.name}" for ii, f in enumerate(files_sorted)}
+    return {
+        f: f.parents[0] / f"{(ii) + 1:02d}_{f.name}"
+        for ii, f in enumerate(files_sorted)
+    }
 
 
 def iterate_path(path_source: Path) -> Dict[Path, Path]:
     d_out = {}
     files_in_folder = []
-    for file in path_source.glob('*'):
+    for file in path_source.glob("*"):
 
         if file.is_file():
             files_in_folder.append(file)
@@ -38,10 +41,7 @@ def iterate_path(path_source: Path) -> Dict[Path, Path]:
     return d_out
 
 
-def run(
-        path_source: Path,
-        path_destination: Path
-):
+def run(path_source: Path, path_destination: Path):
     file_mapping = iterate_path(path_source=path_source)
 
     for src, tgt in file_mapping.items():
@@ -54,20 +54,24 @@ def run(
         copy(src, tgt_)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description='Sorts all files in a folder recursively according to '
-                    'the date of creation by adding an index prefix to the filename'
+        description="Sorts all files in a folder recursively according to "
+        "the date of creation by adding an index prefix to the filename"
     )
-    parser.add_argument('--path_source', type=str, required=True, help='root folder of the files')
-    parser.add_argument('--path_destination', type=str, required=True, help='folder where the files will be written to')
+    parser.add_argument(
+        "--path_source", type=str, required=True, help="root folder of the files"
+    )
+    parser.add_argument(
+        "--path_destination",
+        type=str,
+        required=True,
+        help="folder where the files will be written to",
+    )
 
     args = parser.parse_args()
 
     path_source = Path(args.path_source)
     path_destination = Path(args.path_destination)
 
-    run(
-        path_source=path_source.resolve(),
-        path_destination=path_destination.resolve()
-    )
+    run(path_source=path_source.resolve(), path_destination=path_destination.resolve())
