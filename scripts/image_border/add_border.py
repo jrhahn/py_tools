@@ -1,17 +1,41 @@
 #!/usr/bin/env python
 
-from PIL import Image
+from PIL import Image, ImageOps
 from pathlib import Path
 import argparse
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def process(file_in: Path, file_out: Path) -> None:
+    logger.info(f"Processing {file_in}")
     img = Image.open(file_in)
 
-    with open(file_out, "wb") as fp:
-        img.save(fp)
+    img_expanded = ImageOps.expand(
+        image=img,
+        border=2,
+        fill=(0, 0, 0),
+    )
+    img_expanded = ImageOps.expand(
+        image=img_expanded,
+        border=int(img.width * 0.02),
+        fill=(255, 255, 255),
+    )
+    img_expanded = ImageOps.expand(
+        image=img_expanded,
+        border=5,
+        fill=(0, 0, 0),
+    )
+    img_expanded = ImageOps.expand(
+        image=img_expanded,
+        border=int(img.width * 0.02),
+        fill=(255, 255, 255),
+    )
 
-    print(file_in)
+    with open(file_out, "wb") as fp:
+        img_expanded.save(fp)
 
 
 def run(
