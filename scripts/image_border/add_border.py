@@ -20,17 +20,7 @@ def process(file_in: Path, file_out: Path) -> None:
     )
     img_expanded = ImageOps.expand(
         image=img_expanded,
-        border=int(img.width * 0.02),
-        fill=(255, 255, 255),
-    )
-    img_expanded = ImageOps.expand(
-        image=img_expanded,
-        border=5,
-        fill=(0, 0, 0),
-    )
-    img_expanded = ImageOps.expand(
-        image=img_expanded,
-        border=int(img.width * 0.02),
+        border=int(img.width * 0.04),
         fill=(255, 255, 255),
     )
 
